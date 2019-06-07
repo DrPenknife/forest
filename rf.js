@@ -1,5 +1,5 @@
 var fs = require('fs')
-var f='play.csv'
+var f='tenis.csv'
 
 var data = []
 var features = []
