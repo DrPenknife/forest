@@ -1,5 +1,5 @@
 var fs = require('fs')
-var f='tenis.csv'
+var f='tennis.csv'
 
 var data = []
 var features = []
@@ -10,7 +10,7 @@ var dropheader = true
 
 var rid=0;
 fs.readFile(f,'utf8', function(e,c){
-   data = c.split('\r')
+   data = c.split('\n')
    for(var i=0;i<data.length;i++){
        data[i] = data[i].replace('\n','').split(',');
    }
