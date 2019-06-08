@@ -83,7 +83,7 @@ function entropy(bucket){
 
 
 function bestsplit(bucket,colid){
-   var best={left:[], right:[]}
+   var best=null
    var be = -1.0
    var e = entropy(bucket)
    for(var j =0; j < mlen(cat2id[colid]); j++){
@@ -91,24 +91,22 @@ function bestsplit(bucket,colid){
       var left = []
       var right = []
       for(var i = 0; i < bucket.length; i++){
-          //console.log(cat2id[colid][bucket[i][colid]] + ' ' + j)
           if(cat2id[colid][bucket[i][colid]] == (j+1)) left.push(bucket[i])
           else right.push(bucket[i])
       }
       if(left.length == 0) continue;
       if(right.length == 0) continue;
-      //console.log('analysis ' + j)
-      
+          
       var e1 = entropy(left)
       var e2 = entropy(right)
 	  var gain = (e - e1*left.length/bucket.length - e2*right.length/bucket.length)
       if(gain > be){
          be = gain
+         best={}
          best['left']=left
          best['right']=right
          best['entropy'] = be
          best['split'] = { col:colid, val: j, lab: id2cat[colid][j+1], entropy: e, gain: be}
-         //console.log('impr ' + gain)
       }      
    }
    return best
@@ -118,7 +116,7 @@ function thebestsplit(x){
    var tb = null
    for(var i = 0; i < data[0].length-1; i++){
        var g = bestsplit(x,i)
-       if(!tb || g.entropy < tb.entropy){
+       if(!tb || g && (g.entropy < tb.entropy)){
            tb = g
        }
    }
@@ -135,21 +133,28 @@ function buildtree(x, lvl){
    while(queue.length > 0){
       var d = queue.pop()
       var n = thebestsplit(d.data)
+    	
+      if(!n) {
+         console.log('leaf')
+         console.log(d.data) 
+         continue;
+      }
       d.node['split'] = n['split']
-      d.node['L'] = {}
-      d.node['R'] = {}
+      d.node['L'] = null
+      d.node['R'] = null
       
     
       if(n.split)console.log(n.split)
       else console.log("leaf")
       console.log(d.data)
 
-
       if(n.left.length >0){
+        d.node.L ={}
         queue.push({data:n.left, node: d.node['L']})
       }
 
       if(n.right.length >0){
+         d.node.R ={}
          queue.push({data:n.right, node: d.node['R']})
       }
    }
@@ -160,10 +165,9 @@ function buildtree(x, lvl){
 function classify(x, tree){
    var n=tree
    while(true){
-       
        var sp = n.split
        var val = cat2id[sp.colid][x[sp.colid]]
-       if(val <= sp.val) n = n.L
+       if(val == sp.val) n = n.L
        else n = m.R
    }
 }
