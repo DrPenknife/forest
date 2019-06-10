@@ -110,12 +110,12 @@ function buildtree(data, maxdepth){
         var prnt = q.pop()
         var slices = split(prnt)
         tree[prnt.id] = prnt;
-		if(slices){
+        if(slices){
             if(slices.L)q.push(slices.L)
             if(slices.R)q.push(slices.R)
         }else{
             prnt['isleaf']=true
-		}
+        }
     }
     
     return tree;
@@ -146,7 +146,7 @@ function calcstats(){
     colstats = []
     for(var j=0; j<data[0].length; j++){
         var stat = {}
-		for(var i in data){
+        for(var i in data){
             var l = data[i][j]
             stat[l]=stat[l]?stat[l]+1:1;
         }
