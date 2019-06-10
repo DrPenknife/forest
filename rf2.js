@@ -25,11 +25,12 @@ function entropy(prob){
     return -sum;
 }
 
-function split_col(x, colid, val){
-    console.log('split ' + colid + ' on ' + val)
+function split_col(x, colid, val, e0){
+    //console.log('split ' + colid + ' on ' + val)
     var mp = [[],[]]
     var stat = [{},{}]
     var ln = [0,0]
+    var L = x.length
     for(var i in x){
         var l = x[i][classid] 
         var hit=0
@@ -38,23 +39,42 @@ function split_col(x, colid, val){
         stat[hit][l] = stat[hit][l]?stat[hit][l]+1:1
         mp[hit].push(x[i]) 
     }
-    console.log(stat)
-    console.log( [entropy(stat[0]), entropy(stat[1])] );
-    if(ln[0] && ln[1]) return 1
-	else return null
+    //console.log(stat)
+    var res={split:mp, stats:stat, ln:ln}
+    
+    //console.log( [entropy(stat[0]), entropy(stat[1])] );
+    if(ln[0] && ln[1]){
+        res.gain = e0 
+	               - entropy(stat[0])*ln[0]/L
+                   - entropy(stat[1])*ln[1]/L
+        return res
+    }else return null
 }
 
-function split(node){
+
+function randomsplit(node){
     var col = randint(0, node.data[0].length)
     var sampleid = randint(0, node.data.length)
     var value = node.data[sampleid][col]
-    split_col(node.data, col, value)
-	return null
+    var r = split_col(node.data, col, value, node.entropy)
+    return r
+}
+
+function split(node){
+    var best = null
+    for(var i=0;i<5;i++){
+       var r = randomsplit(node)
+       if(!best || node.gain > best.gain){
+           best = node
+       }
+    } 
+    console.log(best)
+    return best;
 }
 
 function buildtree(data, maxdepth){
     console.log('build tree')
-    var q = [{data:data, depth:maxdepth}]
+    var q = [{data:data, depth:maxdepth, entropy: entropy0}]
     while(q.length){
         var parent = q.pop()
         var children = split(parent)
