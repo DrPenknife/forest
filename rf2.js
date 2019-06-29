@@ -5,14 +5,21 @@ var fs = require('fs')
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
-var f='tennis.csv'
+var f='fw_train_3min_uniq.csv'
+//f = 'tennis.csv' 
 var dropheader = true
+
+var samprate = 0.1
+var selections = 3
+var maximumdepth = 5
+var outputmodel = false
+
 var data = []
+var fdata = []
 var classid = -1
 var header = null
 var colstats = []
 var entropy0 = -1
-var selections = 3
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // Utility functions
@@ -35,6 +42,16 @@ function argmax(prob){
     return mk
 }
 
+function hist(x,id){
+    let m = {}
+    for(var i in x){
+        let lab = x[i][id] 
+        if(!m[lab])m[lab]=1
+        else m[lab]++
+    }
+    return m
+}
+
 function entropy(prob){
 	var denom = 0;
     var sum = 0;
@@ -48,6 +65,40 @@ function entropy(prob){
         sum += p*Math.log(p)
     }
     return {val:-sum, p:probmap};
+}
+
+function groupby(x, c){
+    let g = {}
+    for(let i in x){
+        let l = x[i][c]
+        if(!g[l])g[l]=[]
+        g[l].push(i)
+    }
+    return g
+}
+
+function counts(gr){
+    let r={}
+    for(let k in gr) r[k]=gr[k].length
+    return r
+}
+
+function stsample(x,s,p){
+    let rid = {}
+    for(let g in s){
+       let c = p*s[g].length
+       for(let i =0; i<c; i++){
+          let n = randint(0, s[g].length)
+   	   let m = s[g][n]
+          rid[m] = m
+       }
+    }
+    let ndata=[]
+    let ids = Object.keys(rid)
+    for(let i in ids){
+        ndata.push(x[ids[i]])
+    }
+    return ndata
 }
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -121,6 +172,10 @@ function buildtree(data, maxdepth){
     return tree;
 }
 
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Classifier API
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
 function classify(tree, x){
     var id = 0;
     while(true){
@@ -137,6 +192,26 @@ function classify(tree, x){
     }
 }
 
+function evaluate(t, dat){
+   var err = 0;
+   let cmat = {}
+   for(var i in dat){
+       var x = dat[i];
+       var pr = classify(t, x);
+       var e = x[classid]
+       if(!cmat[e]) cmat[e] = {}
+       if(!cmat[e][e]) cmat[e][e] = 0
+       if(!cmat[e][pr]) cmat[e][pr] = 0
+       cmat[e][pr]++;
+       if(pr != e) err++;
+   }
+  
+   console.log('err='+err + '/' + dat.length);
+   console.log('confusion matrix')
+   console.log(cmat);
+
+} 
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // Data Statistics
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -145,15 +220,16 @@ function classify(tree, x){
 function calcstats(){
     colstats = []
     for(var j=0; j<data[0].length; j++){
-        var stat = {}
+        var range = {min:data[0][j], max:data[0][j]}
+        //var stat = {}
         for(var i in data){
             var l = data[i][j]
-            stat[l]=stat[l]?stat[l]+1:1;
+            //stat[l]=stat[l]?stat[l]+1:1;
+            
         }
-        colstats.push(stat);
+       // colstats.push(stat);
     }
 }
-
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // I/O
@@ -161,33 +237,58 @@ function calcstats(){
 
 
 function alldone(){
-   var tree = buildtree(data, 5)
+   console.log('training...');
+   var tree = buildtree(data, maximumdepth)
 
-   var stream = fs.createWriteStream("out.txt");
-   for(var i in tree)tree[i].data=tree[i].data.map(x=>x.join(","))
-   stream.once('open', function(fd) {
-       stream.write(JSON.stringify(tree,null,4));
-       stream.end();
-   });
-
-   var err = 0;
-   for(var i in data){
-       var x = data[i];
-       var r = classify(tree, x);
-       if(r != x[classid]) err++;
+   if(outputmodel) {
+      var stream = fs.createWriteStream("out.txt");
+      for(var i in tree)tree[i].data=tree[i].data.map(x=>x.join(","))
+      stream.once('open', function(fd) {
+         stream.write(JSON.stringify(tree,null,4));
+         stream.end();
+      });
    }
-   console.log('err='+err + '/' + data.length);
+
+   console.log('evaluating...')
+   evaluate(tree, fdata)
 }
 
+
+console.log('reading file...')
 fs.readFile(f,'utf8', function(e,c){
-   data = c.split('\n')
-   for(var i=0;i<data.length;i++){
-       data[i] = data[i].replace('\r','').replace('\n','').split(',');
+   fdata = c.split('\n')
+   for(var i=0;i<fdata.length;i++){
+       fdata[i] = fdata[i].replace('\r','').replace('\n','').split(',');
+       fdata[i].pop()
    }
-   if(dropheader)header = data.splice(0,1)[0];
-   classid = data[0].length - 1;
-   calcstats()
-   entropy0 = entropy(colstats[classid]);
+   if(dropheader)header = fdata.splice(0,1)[0];
+   classid = fdata[0].length - 1;
+
+   let strats = groupby(fdata, classid)
+   let cnts = counts(strats)
+
+   console.log('strats')
+   console.log(cnts)
+   
+   console.log('sampling data, rate = '+samprate)
+   data = stsample(fdata, strats, samprate)
+   
+   ctr = hist(data, classid)
+   console.log(ctr)
+   entropy0 = entropy(ctr);
    alldone()
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
 
