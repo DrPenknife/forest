@@ -7,12 +7,14 @@ var fs = require('fs')
 
 var f='fw_train_3min_uniq.csv'
 //f = 'tennis.csv' 
+f = 'iris.csv' 
 var dropheader = true
 
-var samprate = 0.1
-var selections = 3
+var samprate = 0.7
+var selections = 5
 var maximumdepth = 5
 var outputmodel = false
+var region_size = 0.001
 
 var data = []
 var fdata = []
@@ -27,7 +29,7 @@ var entropy0 = -1
 
 
 function randint(min, max){
-	return Math.floor((max-min)*Math.random()+min)
+    return Math.floor((max-min)*Math.random()+min)
 }
 
 function argmax(prob){
@@ -53,7 +55,7 @@ function hist(x,id){
 }
 
 function entropy(prob){
-	var denom = 0;
+    var denom = 0;
     var sum = 0;
     var probmap = {};
     for(var key in prob){
@@ -89,7 +91,7 @@ function stsample(x,s,p){
        let c = p*s[g].length
        for(let i =0; i<c; i++){
           let n = randint(0, s[g].length)
-   	   let m = s[g][n]
+          let m = s[g][n]
           rid[m] = m
        }
     }
@@ -105,6 +107,17 @@ function stsample(x,s,p){
 // Random Tree
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+function left_or_right(x, cid, val){
+    if(colstats[cid].type == 'nominal'){
+        if(x[cid] == val)return 0
+		return 1
+    }else{
+		var r = Math.abs(colstats[cid].range.max-colstats[cid].range.min)
+		if( Math.abs(x[cid]-val) <= region_size*r) return 0
+		else return 1;
+    }
+}
+
 function split_col(x, colid, val, e0){
     var mp = [[],[]]
     var stat = [{},{}]
@@ -112,8 +125,7 @@ function split_col(x, colid, val, e0){
     var L = x.length
     for(var i in x){
         var l = x[i][classid] 
-        var hit=1
-        if(x[i][colid] == val)hit=0
+        var hit=left_or_right(x[i], colid, val)
         ln[hit]++;
         stat[hit][l] = stat[hit][l]?stat[hit][l]+1:1
         mp[hit].push(x[i]) 
@@ -181,7 +193,7 @@ function classify(tree, x){
     while(true){
         var node=tree[id]
         if(node.split){
-            if(x[node.split.prop] == node.split.val){
+			if(left_or_right(x,node.split.prop,node.split.val) == 0){
                 id = 2*id+1
             }else{
                 id = 2*id+2
@@ -217,17 +229,29 @@ function evaluate(t, dat){
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
-function calcstats(){
+function calcstats(data){
     colstats = []
     for(var j=0; j<data[0].length; j++){
-        var range = {min:data[0][j], max:data[0][j]}
-        //var stat = {}
+        console.log(header[j]);
+        var range = {min:parseFloat(data[0][j]), max:parseFloat(data[0][j])}
+        var stat = {}
         for(var i in data){
             var l = data[i][j]
-            //stat[l]=stat[l]?stat[l]+1:1;
-            
+            var lfl = parseFloat(l);
+            stat[l]=stat[l]?stat[l]+1:1;
+            if(lfl){
+                if(lfl > range.max)range.max = lfl;
+                if(lfl < range.min)range.min = lfl;
+				data[i][j] = lfl
+            }
         }
-       // colstats.push(stat);
+        var colinfo = {}
+        var values = Object.keys(stat)
+        colinfo['type']=values.length > 10?'numeric':'nominal'
+        if(colinfo['type']=='nominal')colinfo['values']=values
+        if(colinfo['type']=='numeric')colinfo['range']=range
+        console.log(colinfo)
+        colstats.push(colinfo);
     }
 }
 
@@ -259,10 +283,13 @@ fs.readFile(f,'utf8', function(e,c){
    fdata = c.split('\n')
    for(var i=0;i<fdata.length;i++){
        fdata[i] = fdata[i].replace('\r','').replace('\n','').split(',');
-       fdata[i].pop()
+       //fdata[i].pop()
    }
    if(dropheader)header = fdata.splice(0,1)[0];
    classid = fdata[0].length - 1;
+   
+   calcstats(fdata);
+   console.log("-=-=-=-=-=-")
 
    let strats = groupby(fdata, classid)
    let cnts = counts(strats)
@@ -276,6 +303,7 @@ fs.readFile(f,'utf8', function(e,c){
    ctr = hist(data, classid)
    console.log(ctr)
    entropy0 = entropy(ctr);
+   console.log("-=-=-=-=-=-")
    alldone()
 })
 
