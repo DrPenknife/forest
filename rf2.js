@@ -188,8 +188,8 @@ function buildtree(data, maxdepth){
 // Classifier API
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-function classify(tree, x){
-    var id = 0;
+function single_tree_cls(tree,x){
+	var id = 0;
     while(true){
         var node=tree[id]
         if(node.split){
@@ -202,6 +202,10 @@ function classify(tree, x){
             return argmax(node.stats)
         }
     }
+}
+
+function classify(tree, x){
+    return single_tree_cls(tree, x);
 }
 
 function evaluate(t, dat){
