@@ -10,18 +10,17 @@ var f='fw_train_3min_uniq.csv'
 f = 'iris.csv' 
 var dropheader = true
 
-var samprate = 0.7
+var samprate = 0.1
 var selections = 5
-var maximumdepth = 5
+var maximumdepth = 8
 var outputmodel = false
 var region_size = 0.001
 
-var data = []
 var fdata = []
 var classid = -1
 var header = null
 var colstats = []
-var entropy0 = -1
+
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // Utility functions
@@ -97,6 +96,7 @@ function stsample(x,s,p){
     }
     let ndata=[]
     let ids = Object.keys(rid)
+    
     for(let i in ids){
         ndata.push(x[ids[i]])
     }
@@ -146,9 +146,9 @@ function randomsplit(node){
     return r
 }
 
-function split(node){
+function split(node, maxdepth){
     var best = null
-    if(node.entropy < 0.001) return best;
+    if(node.entropy < 0.001 || node.depth > maxdepth) return best;
     for(var i=0;i<selections;i++){
        var r = randomsplit(node)
        if(!best || r && (r.gain > best.gain)){
@@ -166,12 +166,12 @@ function split(node){
     return slices;
 }
 
-function buildtree(data, maxdepth){
+function buildtree(data, entropy0, maxdepth){
     var tree = {}
     var q = [{data:data, depth:0, entropy: entropy0.val, id:0}]
     while(q.length){
         var prnt = q.pop()
-        var slices = split(prnt)
+        var slices = split(prnt, maxdepth)
         tree[prnt.id] = prnt;
         if(slices){
             if(slices.L)q.push(slices.L)
@@ -205,7 +205,13 @@ function single_tree_cls(tree,x){
 }
 
 function classify(tree, x){
-    return single_tree_cls(tree, x);
+    let r = {}
+    for(let i in tree){
+       let u = single_tree_cls(tree[i], x);
+       r[u]=r[u]?r[u]+1:1
+    }
+   // console.log(r)
+    return argmax(r)
 }
 
 function evaluate(t, dat){
@@ -264,21 +270,32 @@ function calcstats(data){
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
-function alldone(){
+function buildmodel(indata){
+   let strats = groupby(indata, classid)
+   let cnts = counts(strats)
    console.log('training...');
-   var tree = buildtree(data, maximumdepth)
+   let trees =[]
+   for(let i = 0; i < 3; i++){
+      //console.log('sampling data, rate = '+samprate)
+      data = stsample(indata, strats, samprate)
 
-   if(outputmodel) {
-      var stream = fs.createWriteStream("out.txt");
-      for(var i in tree)tree[i].data=tree[i].data.map(x=>x.join(","))
-      stream.once('open', function(fd) {
-         stream.write(JSON.stringify(tree,null,4));
-         stream.end();
-      });
+      ctr = hist(data, classid)
+      entropy0 = entropy(ctr);
+
+      console.log('training tree'+i)
+      var t = buildtree(data, entropy0, maximumdepth)
+      trees.push(t)
+      //evaluatemodel([t], fdata)
    }
 
+   console.log('-=-=-=-=-=-=-=-=')
+
+   return trees;
+}
+
+function evaluatemodel(trees,data){
    console.log('evaluating...')
-   evaluate(tree, fdata)
+   evaluate(trees, data)
 }
 
 
@@ -292,23 +309,14 @@ fs.readFile(f,'utf8', function(e,c){
    if(dropheader)header = fdata.splice(0,1)[0];
    classid = fdata[0].length - 1;
    
+   console.log("-=- Colstats =-=-=-=-")
+
    calcstats(fdata);
+  
    console.log("-=-=-=-=-=-")
 
-   let strats = groupby(fdata, classid)
-   let cnts = counts(strats)
-
-   console.log('strats')
-   console.log(cnts)
-   
-   console.log('sampling data, rate = '+samprate)
-   data = stsample(fdata, strats, samprate)
-   
-   ctr = hist(data, classid)
-   console.log(ctr)
-   entropy0 = entropy(ctr);
-   console.log("-=-=-=-=-=-")
-   alldone()
+   let model = buildmodel(fdata)
+   evaluatemodel(model, fdata)
 })
 
 
