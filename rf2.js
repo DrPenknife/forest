@@ -7,7 +7,7 @@ var fs = require('fs')
 
 var f='fw_train_3min_uniq.csv'
 //f = 'tennis.csv' 
-f = 'iris.csv' 
+//f = 'iris.csv' 
 var dropheader = true
 
 var samprate = 0.9
@@ -305,7 +305,7 @@ fs.readFile(f,'utf8', function(e,c){
    fdata = c.split('\n')
    for(var i=0;i<fdata.length;i++){
        fdata[i] = fdata[i].replace('\r','').replace('\n','').split(',');
-       //fdata[i].pop()
+       fdata[i].pop()
    }
    if(dropheader)header = fdata.splice(0,1)[0];
    classid = fdata[0].length - 1;
