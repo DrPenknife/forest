@@ -90,12 +90,50 @@ function calcstats(data){
 // Cart
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+function split(t){
+   let col = randint(0,classid-1)
+   let pid = randint(0,t.length-1)
+   let piv = t[pid][col]
+
+   t.sort(function(a,b) {
+       return a[col] - b[col]
+   })
+   
+   let spv=[]
+
+   for(let i =1;i< t.length; i++){
+      if(t[i-1][classid]!=t[i][classid]){
+        spv.push((t[i-1][col]+t[i][col])/2)
+      }
+   }
+   
+   console.log(spv.length, t.length,spv)
+   let r = {L:[], R:[], col:col, p:piv}
+   for(let i=0; i < t.length; i++){
+      t[i][col] < piv?r.L.push(t[i]):r.R.push(t[i])
+   }
+   return r;
+}
+
 function buildmodel(tab){
-   var q = [{d:tab}]
+   let tr={}
+   var q = [{d:tab, id:0, depth:0}]
    while(q.length){
        var n = q.pop()
+       if(n.d.length > 2 && n.depth < 12){
+           let s = split(n.d)
+           tr[n.id]={col:s.col, p:s.p}
+           q.push({d:s.L,id:n.id*2+1, 
+                   depth:n.depth+1})           
+           q.push({d:s.R,id:n.id*2+2, 
+		    	   depth:n.depth+1})
+       }else{
+           tr[n.id]={lab:1}
+   	}
        
    }
+
+   console.log("done")
 }
 
 
@@ -119,6 +157,9 @@ fs.readFile(f,'utf8', function(e,c){
    console.log("-=-=-=-=-=-")
    let parts = stsample(fdata, data_strats, 0.8)
    let trainstrats = get_strats(parts.a, classid)
+   
+   console.log("build model")
+   buildmodel(parts.a)
 })
 
 
