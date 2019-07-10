@@ -91,7 +91,11 @@ function calcstats(data){
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 function buildmodel(tab){
-   var q = {t
+   var q = [{d:tab}]
+   while(q.length){
+       var n = q.pop()
+       
+   }
 }
 
 
