@@ -270,7 +270,7 @@ function buildmodel(tab){
 }
 
 
-let trip = []
+ 
 function classify(model, x){
 	
 	let votes = iclsc()
@@ -281,7 +281,6 @@ function classify(model, x){
 			var node=tree[id]
 			let nid = isLorR(x,node)?2*id+1:2*id+2
 			if(!tree[nid])break;
-			trip.push(nid)
 			id = nid	
 		}
 		let lab = tree[id].lab?tree[id].lab:"?"
@@ -305,9 +304,6 @@ function evaluate(t, dat){
        if(!cmat[e]) cmat[e] = iclsc()
        cmat[e][pr]++;
        if(pr != e) {
-		   console.log("-------")
-		   console.log('trip',trip.join(","))
-		   console.log('err',x)
 		   err++;
 	   }
    }
@@ -340,11 +336,11 @@ fs.readFile(f,'utf8', function(e,c){
    let trainstrats = get_strats(parts.a, classid)
    
    console.log("build model")
-   let model = buildmodel(fdata)
+   let model = buildmodel(parts.a)
    console.log("done")
 
    console.log("evaluate on training data")
-   evaluate([model], fdata)
+   evaluate([model], parts.a)
    
    console.log("evaluate on validation data")
    evaluate([model], parts.b)
