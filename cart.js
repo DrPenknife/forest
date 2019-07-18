@@ -2,8 +2,8 @@ var fs = require('fs')
 
 
 var f='fw_train_3min_uniq.csv'
-f = 'tennis.csv' 
-//f = 'iris.csv' 
+//f = 'tennis.csv' 
+f = 'iris.csv' 
 var dropheader = true
 
 var fdata = []
