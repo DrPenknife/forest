@@ -3,7 +3,7 @@ var fs = require('fs')
 
 var f='fw_train_3min_uniq.csv'
 //f = 'tennis.csv' 
-f = 'iris.csv' 
+//f = 'iris.csv' 
 var dropheader = true
 
 var fdata = []
@@ -62,10 +62,9 @@ function stsample(x,s,p){
 function calcstats(data, classid){
     colstats = []
     for(var j=0; j<data[0].length; j++){
-        console.log(header[j]);
         var range = {min:parseFloat(data[0][j]), max:parseFloat(data[0][j])}
         var stat = {}
-        for(var i in data){
+        for(let i=0; i < data.length; i++){
             var l = data[i][j]
             var lfl = parseFloat(l);
             stat[l]=stat[l]?stat[l]+1:1;
@@ -75,14 +74,16 @@ function calcstats(data, classid){
 				data[i][j] = lfl
             }
         }
-        var colinfo = {}
+        var colinfo = {name:header[j]}
         var values = Object.keys(stat)
-        colinfo['type']=values.length > 10?'numeric':'nominal'
+        //colinfo['type']=values.length > 1?'numeric':'nominal'
+        colinfo['type']= (j != classid)?'numeric':'nominal'
         if(colinfo['type']=='nominal')colinfo['values']=values
         if(colinfo['type']=='numeric')colinfo['range']=range
-        console.log(colinfo)
-        colstats.push(colinfo);
+		colstats.push(colinfo);
     }
+	colstats[classid]['type'] = 'nominal'
+	console.log(colstats)
 }
 
 
@@ -135,46 +136,39 @@ function gain(l,r){
 	}
 	let s = l.length + r.length
 	
-	return impurity(g,s)-
-	       ((impurity(lm, l.length)*l.length)/s + 
-		    (impurity(ln, r.length)*r.length)/s)
-}
-
-function isLorR(x, node){
-	if(!colstats[node.col])return true
-	if(colstats[node.col].type == "numeric"){
-		if(x[node.col] < node.p) return true
-	}else{
-		if(x[node.col] == node.p)return true
-	}
-	return false;
+	let impTot = impurity(g,s)
+	let impL=impurity(lm, l.length)*l.length/s
+	let impR=impurity(ln, r.length)*r.length/s
+	
+	let val = impTot-(impL + impR)
+	
+	return {v:val, impL:impL, impR:impR, impTot:impTot, ctL:lm, ctR:ln, ctG:g}
+	
 }
 
 function group(arr,x,col,th){
 	if(colstats[col].type == "numeric"){
-		if(x[col] == th)arr.E.push(x)
-			else x[col] < th?arr.L.push(x):arr.R.push(x)
+		(x[col] < th)?arr.L.push(x):arr.R.push(x)
 	}else{
 		(x[col] == th)?arr.L.push(x):arr.R.push(x)
 	}
 }
 
 function checksplit(t, spv, col){
-	let bestgain = -100
+	let bestgain = null
 	let bestsplit = 0
-	for(let i = 0; i<spv.length; i++){
-		let ts = {L:[], R:[], E:[]}
-		for(let j=0; j < t.length; j++)group(ts,t[j],col,spv[i])
-		if(ts.L.length == 0)ts.L=ts.L.concat(ts.E)
-		else ts.R=ts.R.concat(ts.E)
+	for(let i = 1; i<spv.length; i++){
+		let th = (spv[i]+spv[i-1])/2
+		let ts = {L:[], R:[]}
+		for(let j=0; j < t.length; j++)group(ts,t[j],col,th)
 		let g = gain(ts.L,ts.R)
-		if(g>bestgain)
+		if(!bestgain || g.v>bestgain.v)
 		{
 			bestgain = g
-			bestsplit = spv[i]
+			bestgain.th = th;
 		}
    }
-   return {gain:bestgain, split:bestsplit}
+   return bestgain
 }
 
 function dist(d,classid){
@@ -187,10 +181,9 @@ function dist(d,classid){
 }
 
 function split(t){	
-   let bestcol = null;  
-   let bestgain = -100
-   let bestsplit = 0
+   let bestgain = null
    let maxlab = t[0][classid]
+   //console.log(t)
    if(t.length <= 1) return null;
    
    for(let col = 0; col < classid; col++){
@@ -213,33 +206,29 @@ function split(t){
 			   spv[i*(rng.max-rng.min)/maxBin+rng.min]=1
 	   }
 	 
-	   spv = Object.keys(spv)
+	   spv = Object.keys(spv).map(x=>parseFloat(x))
 	   
-	   candidate = checksplit(t,spv,col)
+	   let candidate = checksplit(t,spv,col)
+	   if(!candidate) continue;
 	   
-	   if(candidate.gain > bestgain){
-			bestgain=candidate.gain
-			bestsplit=candidate.split
-			bestcol = col
+	   if(!bestgain || (candidate.v > bestgain.v)){
+			bestgain=candidate
+			bestgain.col = col
+			bestgain.spv = spv.slice(0)
+			bestgain.rng = Object.assign({},rng)
 	   }
 	   
    }
    
-   if(bestgain < 0) return null
-   piv = bestsplit
-   let r = {L:[], R:[], col:bestcol, p:piv, labels:[], E:[]}
+   if(!bestgain) return null
+   let r = {L:[], R:[], split:bestgain, labels:[]}
    let eq = []
    
    for(let i=0; i < t.length; i++){
-	  group(r,t[i],bestcol,piv)
+	  group(r,t[i],r.split.col,r.split.th)
    }
 
-   if(r.L.length == 0 && r.R.length == 0){
-	   return null
-   }
-   
-   if(r.L.length == 0)r.L=r.L.concat(eq)
-   else r.R=r.R.concat(eq)
+   //console.log(r.L.length, r.R.length, bestgain)
 
    r.labels[0]=argmax(dist(r.L,classid))
    r.labels[1]=argmax(dist(r.R,classid))
@@ -247,28 +236,19 @@ function split(t){
    return r;
 }
 
-function buildmodel(tab){
-   let tr={}
-   var q = [{d:tab, id:0, depth:0}]
-   let ctr = 0;
-   while(q.length){
-       var n = q.pop()
-	   //console.log('split ',n.d.length)
-	   let s = split(n.d)
-	   tr[n.id]={lab:n.lab}
-	   if(!s)continue;
-	   tr[n.id].col=s.col
-	   tr[n.id].p=s.p
-	   if(s.L.length)q.push({d:s.L,id:n.id*2+1, 
-			   depth:n.depth+1, lab:s.labels[0]})           
-	   if(s.R.length)q.push({d:s.R,id:n.id*2+2, 
-			   depth:n.depth+1, lab:s.labels[1]})
-       
-   }
-   console.log(tr)
-   return tr
-}
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// Model
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+function isLorR(x, node){
+	if(!colstats[node.col])return true
+	if(colstats[node.col].type == "numeric"){
+		if(x[node.col] < node.p) return true
+	}else{
+		if(x[node.col] == node.p)return true
+	}
+	return false;
+}
 
  
 function classify(model, x){
@@ -289,6 +269,35 @@ function classify(model, x){
 	return argmax(votes)
 }
 
+
+function buildmodel(tab){
+   let tr={}
+   var q = [{d:tab, id:0, depth:0, impur:1}]
+   let ctr = 0;
+   while(q.length){
+       var n = q.pop()
+	   //console.log('---------------split--------- ',n.d.length,n.id,n.impur, n.depth)
+	   tr[n.id]={lab:n.lab}
+	   if(n.impur<0.00001)continue;
+	   let s = split(n.d)
+	   if(!s)continue
+	   tr[n.id].col=s.split.col
+	   tr[n.id].p=s.split.th
+	  // console.log('split',s.split)
+	   //console.log(n.d)
+	   //console.log('L',s.L)
+	   //console.log('R',s.R)
+	   
+	   q.push({d:s.L,id:n.id*2+1, 
+			   depth:n.depth+1, lab:s.labels[0], impur:s.split.impL})           
+	   q.push({d:s.R,id:n.id*2+2, 
+			   depth:n.depth+1, lab:s.labels[1], impur:s.split.impR})
+       
+   }
+   //console.log(tr)
+   return tr
+}
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // Evaluation
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -304,6 +313,7 @@ function evaluate(t, dat){
        if(!cmat[e]) cmat[e] = iclsc()
        cmat[e][pr]++;
        if(pr != e) {
+		   console.log(x.join())
 		   err++;
 	   }
    }
@@ -320,13 +330,35 @@ function evaluate(t, dat){
 
 console.log('reading file...')
 fs.readFile(f,'utf8', function(e,c){
-   fdata = c.split('\n')
-   for(let i=0;i<fdata.length;i++){
-       fdata[i] = fdata[i].replace('\r','').replace('\n','').split(',');
-       //fdata[i].pop()
+   let adata = c.split('\n')
+   for(let i=1;i<adata.length;i++){
+       adata[i] = adata[i].replace('\r','').replace('\n','').split(',');
+       adata[i].pop()
+	   fdata.push(adata[i].map(x=>parseFloat(x)))
    }
-   if(dropheader)header = fdata.splice(0,1)[0];
+   header = adata[0]
    classid = fdata[0].length - 1;
+   
+   let hits = {}
+   for(let i=0;i<fdata.length;i++){
+     let key = fdata[i].slice(0,classid).join()
+	 if(!hits[key])hits[key] = []
+	 hits[key].push(fdata[i][classid])
+   }
+   let wrong = 0
+   for(let k in hits){
+	 if(hits[k].length > 1){
+		for(let j = 1; j < hits[k].length; j++){
+			if(hits[k][j]!=hits[k][0]){
+				console.log(++wrong,k,hits[k]);
+				break;
+			}	
+		}			
+	 }
+   }
+   
+   
+   //if(dropheader)header = fdata.splice(0,1)[0];
    data_strats = get_strats(fdata, classid)
  
    console.log("-=- Colstats =-=-=-=-")
@@ -336,14 +368,14 @@ fs.readFile(f,'utf8', function(e,c){
    let trainstrats = get_strats(parts.a, classid)
    
    console.log("build model")
-   let model = buildmodel(parts.a)
+   let model = buildmodel(fdata)
    console.log("done")
 
    console.log("evaluate on training data")
-   evaluate([model], parts.a)
+   evaluate([model], fdata)
    
-   console.log("evaluate on validation data")
-   evaluate([model], parts.b)
+  // console.log("evaluate on validation data")
+  // evaluate([model], parts.b)
 })
 
 
