@@ -3,8 +3,7 @@ var fs = require('fs')
 
 var f='fw_train_3min_uniq.csv'
 //f = 'tennis.csv' 
-//f = 'iris.csv' 
-var dropheader = true
+f = 'iris.csv' 
 
 var fdata = []
 var classid = -1
@@ -333,32 +332,12 @@ fs.readFile(f,'utf8', function(e,c){
    let adata = c.split('\n')
    for(let i=1;i<adata.length;i++){
        adata[i] = adata[i].replace('\r','').replace('\n','').split(',');
-       adata[i].pop()
+       //adata[i].pop()
 	   fdata.push(adata[i].map(x=>parseFloat(x)))
    }
    header = adata[0]
    classid = fdata[0].length - 1;
    
-   let hits = {}
-   for(let i=0;i<fdata.length;i++){
-     let key = fdata[i].slice(0,classid).join()
-	 if(!hits[key])hits[key] = []
-	 hits[key].push(fdata[i][classid])
-   }
-   let wrong = 0
-   for(let k in hits){
-	 if(hits[k].length > 1){
-		for(let j = 1; j < hits[k].length; j++){
-			if(hits[k][j]!=hits[k][0]){
-				console.log(++wrong,k,hits[k]);
-				break;
-			}	
-		}			
-	 }
-   }
-   
-   
-   //if(dropheader)header = fdata.splice(0,1)[0];
    data_strats = get_strats(fdata, classid)
  
    console.log("-=- Colstats =-=-=-=-")
