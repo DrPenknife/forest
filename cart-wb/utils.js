@@ -28,7 +28,7 @@ function draw(e,html){
   if(e.L){
   let li1= document.createElement("LI");  
   html.appendChild(li1)
-  li1.appendChild(document.createTextNode("L("+"x["+e.f+"]<"+e.v+"):"));  
+  li1.appendChild(document.createTextNode("L("+"x["+e.f+"]<"+e.v.toFixed(2)+"):"));  
   let ol1 = document.createElement("ul");  
   li1.appendChild(ol1)
   draw(e.L,ol1)
@@ -36,7 +36,7 @@ function draw(e,html){
   if(e.R){
   let li1= document.createElement("LI");  
   html.appendChild(li1)
-  li1.appendChild(document.createTextNode("R("+"x["+e.f+"]>="+e.v+"):"));  
+  li1.appendChild(document.createTextNode("R("+"x["+e.f+"]>="+e.v.toFixed(2)+"):"));  
   let ol1 = document.createElement("ul");  
   li1.appendChild(ol1)
   draw(e.R,ol1)
