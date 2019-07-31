@@ -99,9 +99,4 @@ split(_data,root,_gimpur)
 
 //lg(root)
 draw(root, document.getElementById("root"))
-
-echo("<h3>Results</h3>")
-echo("impurity="+_gimpur)
-
-//echo("<h3>Dataset</h3>")
-//htmltab(_data,_y)
+fixlast();

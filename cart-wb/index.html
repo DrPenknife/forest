@@ -1,9 +1,34 @@
 
 <html>
 <head>
+<style>
+   ul {
+     list-style-type: none;
+     margin: 0;
+     padding: 0;
+     margin-left: 10px;
+      background: url(vline.png) repeat-y;
+   }
+
+   li {
+     margin: 0;
+     padding: 0 12px;
+     line-height: 20px;
+     color: #369;
+     font-weight: bold;
+     background: url(node.png) no-repeat;
+   }
+   
+   li.last {
+     background: #fff url(lastnode.png) no-repeat;
+   }
+  
+</style>
+
 </head>
 <body>
 <h1>Random Forest</h1>
+root
 <ul id="root"></ul>
 
 <script src="data.js"></script>
