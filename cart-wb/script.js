@@ -5,8 +5,20 @@ _data=iris.slice(1)
 //_data=netflow.slice(1).map(x=>x.slice(0,8))
 let echo=(x)=>document.write(x)
 
+let _acc = (p,a)=>(p[a]=++p[a]||1,p)
+let _rep=(n,val)=>("+".repeat(n).split("").map(x=>val||0))
+let _zct=()=>_rep(_y.total)
+let _sum=(a,b)=>a+b
+let _rint=(min,max)=>Math.floor((max-min)*Math.random()+min)
+let _getcls=(dat)=>dat.map(x=>x[_c])
+
+let _ctcls=(dat)=>_getcls(dat).reduce(_acc,_zct())
+let _impur_b=(t,s)=>(1 - t.map(v=>v*v/s/s).reduce(_sum))
+let _impur=(dat)=>_impur_b(_ctcls(dat),dat.length)
+
+
 let _y={}
-_y.hist = _data.map(x=>x[x.length-1]).reduce((a,b)=>(a[b]=++a[b]||1,a),{})
+_y.hist = _data.map(x=>x[x.length-1]).reduce(_acc,{})
 _y.total = 0
 _y.map = Object.keys(_y.hist).reduce((prev,act)=>(prev[act]=_y.total++,prev),{})
 _y.head=_data[0]
@@ -16,15 +28,6 @@ _data.map(r=>r[_c]=_y.map[r[_c]])
 console.log("data loaded...")
 console.log("class dist.", _y.hist)
 
-let _rep=(n,val)=>("+".repeat(n).split("").map(x=>val||0))
-let _zct=()=>_rep(_y.total)
-let _sum=(a,b)=>a+b
-let _rint=(min,max)=>Math.floor((max-min)*Math.random()+min)
-let _getcls=(dat)=>dat.map(x=>x[_c])
-let _acc = (p,a)=>(p[a]=++p[a]||1,p)
-let _ctcls=(dat)=>_getcls(dat).reduce(_acc,_zct())
-let _impur_b=(t,s)=>(1 - t.map(v=>v*v/s/s).reduce(_sum))
-let _impur=(dat)=>_impur_b(_ctcls(dat),dat.length)
 
 
 function scan(i0,d,colid){
