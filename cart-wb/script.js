@@ -28,8 +28,6 @@ _data.map(r=>r[_c]=_y.map[r[_c]])
 console.log("data loaded...")
 console.log("class dist.", _y.hist)
 
-
-
 function scan(i0,d,colid){
   var nbin=Math.min(d.length,10)
   var bi = _rep(nbin).reduce((p,c)=>(p.push(_zct()),p),[])
@@ -94,12 +92,9 @@ function split(d,nod,i0){
 }
 
 let root={}
-
 console.log("training...")
-
 var _gimpur = _impur_b(_ctcls(_data),_data.length)
 split(_data,root,_gimpur)
 
-//lg(root)
 draw(root, document.getElementById("root"))
 fixlast();
