@@ -1,0 +1,325 @@
+<html>
+<body>
+<script type="text/javascript">
+const BU = 2
+function lg(x){
+  document.write(JSON.stringify(x))
+  document.write("<br>")
+}
+function rand(n){
+ return Math.floor(n*Math.random()+0.5)
+}
+function randu(a,b){
+ let r=Math.random()
+ return a+(b-a)*r;
+}
+function exp(r){
+ let lg=Math.log(Math.random())
+ return -lg/r
+}
+function sc(x,t){
+ return (x-t.mi)/(t.mx-t.mi)
+}
+function mx(a,b){
+ return Math.max(a,b)
+}
+function mi(a,b){
+ return Math.min(a,b)
+}
+function sum(a,b){
+ return a+b
+}
+function transpose(ds){
+ let nds=[]
+ for(let i=0;i<ds[0].length;++i){
+  let col=ds.map(x=>x[i])
+  nds.push(col)
+ }
+ return nds
+}
+function mimx(ds){
+ let kernel=[]
+ for(let i=0;i<ds.length-1;++i){
+  let col=ds[i]
+  let d = {
+   mx:col.reduce(mx,col[0]),
+   mi:col.reduce(mi,col[0]),
+   w:1
+  }
+  d.w=d.mx-d.mi
+  kernel.push(d)  
+ }
+ return kernel
+}
+function norm(ds){
+ let nds = []
+ let d=mimx(ds)
+ for(let i=0;i<ds.length-1;++i){
+  let col=ds[i]
+  nds.push(col.map(x=>sc(x,d[i])))
+ }
+ let lb=ds.length-1
+ nds.push(ds[lb])
+ return {ranges:d,data:nds}
+}
+function sdim(rng){
+ let r = Math.random()
+ let sm=0
+ let denom=rng.map(x=>x.w).reduce(sum)
+ for(let i=0;i<rng.length;i++){
+  sm+=rng[i].w/(denom+0.01)
+  if(sm>=r)return i;
+ }
+ return rng.length-1;
+}
+function slice(ds,idx){
+ let nds=[]
+ ds.map(x=>{
+  let y=[]
+  idx.map(i=>y.push(x[i]))
+  nds.push(y)
+ })
+ return nds
+}
+function split(ds,d,t){
+ let l=[],r=[]
+ ds[d].map((x,i)=>{
+  if(x<=t)l.push(i)
+  else r.push(i)
+ })
+ let ld=slice(ds,l)
+ let rd=slice(ds,r)
+ return {lt:ld,rt:rd}
+}
+function box(n){
+ let rng=mimx(n.ref)
+ let s=rng.map(m=>m.w).reduce(sum)
+ let cost=exp(s)
+ if(n.cost + cost < BU){
+  let dim=sdim(rng)
+  let d=rng[dim]
+  console.log(dim)
+  let t=randu(d.mi,d.mx)
+  let u=split(n.ref,dim,t)
+  n.t=t
+  n.dim=dim
+  if(u.lt){
+   n.left={}
+   n.left.ref=u.lt
+   n.left.cost=n.cost+cost
+   n.left.leaf=false
+   box(n.left)
+  }
+  if(u.rt){
+   n.right={}
+   n.right.ref=u.rt
+   n.right.cost=n.cost+cost
+   n.right.leaf=false
+   box(n.right)
+  }
+ }else{
+  n.leaf=true
+  n.cost=BU
+  let cls=n.ref[n.ref.length-1]
+  let h=cls.reduce((a,b)=>(a[b]=++a[b]||1,a),{})
+  n.hist = h
+ }
+}
+function tree(nd){
+ var root = {}
+ root.ref = nd
+ root.cost= 0
+ root.leaf= false
+ box(root)
+ return root;
+}
+
+function clsfy(x,tree){
+ let r = tree
+ let dpth=0
+ while(true){
+  if(r.leaf){
+   console.log(r.hist)  	
+   console.log("hit for ",x[x.length-1], dpth)
+   break
+  }
+  if(r.left && x[r.dim]<=r.t){
+   r=r.left
+  }else if(r.right && x[r.dim]>r.t){
+   r=r.right
+  }else{
+  	console.log("WHAAAAAT!")
+  	break
+  }
+  dpth++
+ }
+}
+
+function main(){
+ lg("num of inst. "+iris.length)
+ let labid = iris[0].length-1
+ let tdata = transpose(iris.slice(1))
+ let nd = norm(tdata)
+ let t = tree(nd.data)
+ 
+ clsfy(nd.data.map(_=>_[1]), t)
+
+ lg("****")
+}
+
+
+var iris = [["sepal.length","sepal.width","petal.length","petal.width","variety"],
+[5.1,3.5,1.4,.2,"Setosa"],
+[4.9,3,1.4,.2,"Setosa"],
+[4.7,3.2,1.3,.2,"Setosa"],
+[4.6,3.1,1.5,.2,"Setosa"],
+[5,3.6,1.4,.2,"Setosa"],
+[5.4,3.9,1.7,.4,"Setosa"],
+[4.6,3.4,1.4,.3,"Setosa"],
+[5,3.4,1.5,.2,"Setosa"],
+[4.4,2.9,1.4,.2,"Setosa"],
+[4.9,3.1,1.5,.1,"Setosa"],
+[5.4,3.7,1.5,.2,"Setosa"],
+[4.8,3.4,1.6,.2,"Setosa"],
+[4.8,3,1.4,.1,"Setosa"],
+[4.3,3,1.1,.1,"Setosa"],
+[5.8,4,1.2,.2,"Setosa"],
+[5.7,4.4,1.5,.4,"Setosa"],
+[5.4,3.9,1.3,.4,"Setosa"],
+[5.1,3.5,1.4,.3,"Setosa"],
+[5.7,3.8,1.7,.3,"Setosa"],
+[5.1,3.8,1.5,.3,"Setosa"],
+[5.4,3.4,1.7,.2,"Setosa"],
+[5.1,3.7,1.5,.4,"Setosa"],
+[4.6,3.6,1,.2,"Setosa"],
+[5.1,3.3,1.7,.5,"Setosa"],
+[4.8,3.4,1.9,.2,"Setosa"],
+[5,3,1.6,.2,"Setosa"],
+[5,3.4,1.6,.4,"Setosa"],
+[5.2,3.5,1.5,.2,"Setosa"],
+[5.2,3.4,1.4,.2,"Setosa"],
+[4.7,3.2,1.6,.2,"Setosa"],
+[4.8,3.1,1.6,.2,"Setosa"],
+[5.4,3.4,1.5,.4,"Setosa"],
+[5.2,4.1,1.5,.1,"Setosa"],
+[5.5,4.2,1.4,.2,"Setosa"],
+[4.9,3.1,1.5,.2,"Setosa"],
+[5,3.2,1.2,.2,"Setosa"],
+[5.5,3.5,1.3,.2,"Setosa"],
+[4.9,3.6,1.4,.1,"Setosa"],
+[4.4,3,1.3,.2,"Setosa"],
+[5.1,3.4,1.5,.2,"Setosa"],
+[5,3.5,1.3,.3,"Setosa"],
+[4.5,2.3,1.3,.3,"Setosa"],
+[4.4,3.2,1.3,.2,"Setosa"],
+[5,3.5,1.6,.6,"Setosa"],
+[5.1,3.8,1.9,.4,"Setosa"],
+[4.8,3,1.4,.3,"Setosa"],
+[5.1,3.8,1.6,.2,"Setosa"],
+[4.6,3.2,1.4,.2,"Setosa"],
+[5.3,3.7,1.5,.2,"Setosa"],
+[5,3.3,1.4,.2,"Setosa"],
+[7,3.2,4.7,1.4,"Versicolor"],
+[6.4,3.2,4.5,1.5,"Versicolor"],
+[6.9,3.1,4.9,1.5,"Versicolor"],
+[5.5,2.3,4,1.3,"Versicolor"],
+[6.5,2.8,4.6,1.5,"Versicolor"],
+[5.7,2.8,4.5,1.3,"Versicolor"],
+[6.3,3.3,4.7,1.6,"Versicolor"],
+[4.9,2.4,3.3,1,"Versicolor"],
+[6.6,2.9,4.6,1.3,"Versicolor"],
+[5.2,2.7,3.9,1.4,"Versicolor"],
+[5,2,3.5,1,"Versicolor"],
+[5.9,3,4.2,1.5,"Versicolor"],
+[6,2.2,4,1,"Versicolor"],
+[6.1,2.9,4.7,1.4,"Versicolor"],
+[5.6,2.9,3.6,1.3,"Versicolor"],
+[6.7,3.1,4.4,1.4,"Versicolor"],
+[5.6,3,4.5,1.5,"Versicolor"],
+[5.8,2.7,4.1,1,"Versicolor"],
+[6.2,2.2,4.5,1.5,"Versicolor"],
+[5.6,2.5,3.9,1.1,"Versicolor"],
+[5.9,3.2,4.8,1.8,"Versicolor"],
+[6.1,2.8,4,1.3,"Versicolor"],
+[6.3,2.5,4.9,1.5,"Versicolor"],
+[6.1,2.8,4.7,1.2,"Versicolor"],
+[6.4,2.9,4.3,1.3,"Versicolor"],
+[6.6,3,4.4,1.4,"Versicolor"],
+[6.8,2.8,4.8,1.4,"Versicolor"],
+[6.7,3,5,1.7,"Versicolor"],
+[6,2.9,4.5,1.5,"Versicolor"],
+[5.7,2.6,3.5,1,"Versicolor"],
+[5.5,2.4,3.8,1.1,"Versicolor"],
+[5.5,2.4,3.7,1,"Versicolor"],
+[5.8,2.7,3.9,1.2,"Versicolor"],
+[6,2.7,5.1,1.6,"Versicolor"],
+[5.4,3,4.5,1.5,"Versicolor"],
+[6,3.4,4.5,1.6,"Versicolor"],
+[6.7,3.1,4.7,1.5,"Versicolor"],
+[6.3,2.3,4.4,1.3,"Versicolor"],
+[5.6,3,4.1,1.3,"Versicolor"],
+[5.5,2.5,4,1.3,"Versicolor"],
+[5.5,2.6,4.4,1.2,"Versicolor"],
+[6.1,3,4.6,1.4,"Versicolor"],
+[5.8,2.6,4,1.2,"Versicolor"],
+[5,2.3,3.3,1,"Versicolor"],
+[5.6,2.7,4.2,1.3,"Versicolor"],
+[5.7,3,4.2,1.2,"Versicolor"],
+[5.7,2.9,4.2,1.3,"Versicolor"],
+[6.2,2.9,4.3,1.3,"Versicolor"],
+[5.1,2.5,3,1.1,"Versicolor"],
+[5.7,2.8,4.1,1.3,"Versicolor"],
+[6.3,3.3,6,2.5,"Virginica"],
+[5.8,2.7,5.1,1.9,"Virginica"],
+[7.1,3,5.9,2.1,"Virginica"],
+[6.3,2.9,5.6,1.8,"Virginica"],
+[6.5,3,5.8,2.2,"Virginica"],
+[7.6,3,6.6,2.1,"Virginica"],
+[4.9,2.5,4.5,1.7,"Virginica"],
+[7.3,2.9,6.3,1.8,"Virginica"],
+[6.7,2.5,5.8,1.8,"Virginica"],
+[7.2,3.6,6.1,2.5,"Virginica"],
+[6.5,3.2,5.1,2,"Virginica"],
+[6.4,2.7,5.3,1.9,"Virginica"],
+[6.8,3,5.5,2.1,"Virginica"],
+[5.7,2.5,5,2,"Virginica"],
+[5.8,2.8,5.1,2.4,"Virginica"],
+[6.4,3.2,5.3,2.3,"Virginica"],
+[6.5,3,5.5,1.8,"Virginica"],
+[7.7,3.8,6.7,2.2,"Virginica"],
+[7.7,2.6,6.9,2.3,"Virginica"],
+[6,2.2,5,1.5,"Virginica"],
+[6.9,3.2,5.7,2.3,"Virginica"],
+[5.6,2.8,4.9,2,"Virginica"],
+[7.7,2.8,6.7,2,"Virginica"],
+[6.3,2.7,4.9,1.8,"Virginica"],
+[6.7,3.3,5.7,2.1,"Virginica"],
+[7.2,3.2,6,1.8,"Virginica"],
+[6.2,2.8,4.8,1.8,"Virginica"],
+[6.1,3,4.9,1.8,"Virginica"],
+[6.4,2.8,5.6,2.1,"Virginica"],
+[7.2,3,5.8,1.6,"Virginica"],
+[7.4,2.8,6.1,1.9,"Virginica"],
+[7.9,3.8,6.4,2,"Virginica"],
+[6.4,2.8,5.6,2.2,"Virginica"],
+[6.3,2.8,5.1,1.5,"Virginica"],
+[6.1,2.6,5.6,1.4,"Virginica"],
+[7.7,3,6.1,2.3,"Virginica"],
+[6.3,3.4,5.6,2.4,"Virginica"],
+[6.4,3.1,5.5,1.8,"Virginica"],
+[6,3,4.8,1.8,"Virginica"],
+[6.9,3.1,5.4,2.1,"Virginica"],
+[6.7,3.1,5.6,2.4,"Virginica"],
+[6.9,3.1,5.1,2.3,"Virginica"],
+[5.8,2.7,5.1,1.9,"Virginica"],
+[6.8,3.2,5.9,2.3,"Virginica"],
+[6.7,3.3,5.7,2.5,"Virginica"],
+[6.7,3,5.2,2.3,"Virginica"],
+[6.3,2.5,5,1.9,"Virginica"],
+[6.5,3,5.2,2,"Virginica"],
+[6.2,3.4,5.4,2.3,"Virginica"],
+[5.9,3,5.1,1.8,"Virginica"]]
+main()
+</script>
+</body>
+</html>
