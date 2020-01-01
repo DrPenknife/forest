@@ -1,9 +1,10 @@
 <html>
 <body>
 <script type="text/javascript">
-const BU = 6
-function lg(x){
-  document.write(JSON.stringify(x))
+
+function lg(x,plain){
+  let txt=plain?x:JSON.stringify(x)
+  document.write(txt)
   document.write("<br>")
 }
 function rand(n){
@@ -51,9 +52,9 @@ function mimx(ds){
  }
  return kernel
 }
-function norm(ds){
+function norm(ds,rngs){
  let nds = []
- let d=mimx(ds)
+ let d=rngs||mimx(ds)
  for(let i=0;i<ds.length-1;++i){
   let col=ds[i]
   nds.push(col.map(x=>sc(x,d[i])))
@@ -101,7 +102,6 @@ function node(data,cost){
 }
 function leaf(n){
  n.leaf=true
- n.cost=BU
  let cls=n.ref[n.ref.length-1]
  let acc=(a,b)=>(a[b]=++a[b]||1,a)
  let h=cls.reduce(acc,{})
@@ -115,7 +115,7 @@ function leaf(n){
  n.label=mxv
  n.hist = h
 }
-function box(n){
+function box(n,BU){
  let rng=n.rng
  let s=rng.map(m=>m.w).reduce(sum)
  let cost=exp(s)+n.cost
@@ -129,21 +129,22 @@ function box(n){
   if(u.lt){
    n.left=node(u.lt,cost)
    n.left.rng=mimx(u.lt)
-   box(n.left)
+   box(n.left,BU)
   }
   if(u.rt){
    n.right=node(u.rt,cost)
    n.right.rng=mimx(u.rt)
-   box(n.right)
+   box(n.right,BU)
   }
  }else{
    leaf(n)
+   n.cost=BU
  }
 }
-function tree(nd){
+function tree(nd,BU){
  var root = node(nd,0)
  root.rng=mimx(nd)
- box(root)
+ box(root,BU)
  return root;
 }
 
@@ -190,31 +191,37 @@ function stratify(d,r){
   b:slice(d,idx[1])}
 }
 
+function calcerror(title,t,data){
+ let N=data[0].length
+ let error=0
+ for(let i=0;i<N;i++){
+  let x=rand(N-1) 
+  let qry=data.map(_=>_[x])
+  let exptd=qry[qry.length-1]
+  let f=clsfy(qry, t)
+  if(f[1]!=exptd)error++
+ }
+ lg("<strong>"+title+"</strong>",1)
+ let ep = (100*error/N).toFixed(2)
+ lg("E="+
+  (error)+"/"+N+"="+ep+"%",1)
+}
 
 function main(){
- lg("num of inst. "+iris.length)
+ lg("Loaded "+iris.length+" instances",1)
  let labid = iris[0].length-1
  let tdata = transpose(iris.slice(1))
  
  const sd=stratify(tdata,0.9)
 
- lg("****")
- let nd = norm(sd.a)
- let t = tree(nd.data)
- 
- let N=nd.data[0].length
- let error=0
- for(let i=0;i<N;i++){
-  let x=rand(N-1) 
-  let qry=nd.data.map(_=>_[x])
-  let exptd=qry[qry.length-1]
-  let f=clsfy(qry, t)
-  if(f[1]!=exptd)error++
- }
- lg("error="+
-  (error)+"/"+N+"="+(error/N))
+  
+ let nd=norm(sd.a)
+ let testd=norm(sd.b,nd.ranges)
+ let t = tree(nd.data,6)
 
- lg("****")
+ calcerror("Train",t,nd.data)
+ calcerror("Test",t,testd.data)
+
 }
 
 
