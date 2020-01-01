@@ -87,8 +87,9 @@ function split(ds,d,t){
   if(x<=t)l.push(i)
   else r.push(i)
  })
- let ld=slice(ds,l)
- let rd=slice(ds,r)
+ let ld,rd;
+ if(l.length)ld=slice(ds,l)
+ if(r.length)rd=slice(ds,r)
  return {lt:ld,rt:rd}
 }
 function node(data,cost){
@@ -159,7 +160,7 @@ function clsfy(x,tree){
    r=r.right
   }else{ 
    console.log(x)
-   console.log("WHAAAAAT!")
+   alert("WHAAAAAT?!")
    break
   }
   dpth++
