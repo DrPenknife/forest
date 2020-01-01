@@ -1,7 +1,7 @@
 <html>
 <body>
 <script type="text/javascript">
-const BU = 2
+const BU = 6
 function lg(x){
   document.write(JSON.stringify(x))
   document.write("<br>")
@@ -91,45 +91,57 @@ function split(ds,d,t){
  let rd=slice(ds,r)
  return {lt:ld,rt:rd}
 }
+function node(data,cost){
+ let n={}
+ n.ref=data
+ n.cost=cost
+ n.leaf=false
+ return n
+}
+function leaf(n){
+ n.leaf=true
+ n.cost=BU
+ let cls=n.ref[n.ref.length-1]
+ let acc=(a,b)=>(a[b]=++a[b]||1,a)
+ let h=cls.reduce(acc,{})
+ let red=(a,b)=>a[0]>b[0]?a:b
+ let vals=Object.values(h)
+ let sm=vals.reduce(sum)
+ let kys=Object.keys(h)
+ let pval=vals.map((a,i)=>[a,kys[i]])
+ let mxv=pval.reduce(red)
+ mxv[0]/=sm
+ n.label=mxv
+ n.hist = h
+}
 function box(n){
- let rng=mimx(n.ref)
+ let rng=n.rng
  let s=rng.map(m=>m.w).reduce(sum)
- let cost=exp(s)
- if(n.cost + cost < BU){
+ let cost=exp(s)+n.cost
+ if(cost < BU){
   let dim=sdim(rng)
   let d=rng[dim]
-  console.log(dim)
   let t=randu(d.mi,d.mx)
   let u=split(n.ref,dim,t)
   n.t=t
   n.dim=dim
   if(u.lt){
-   n.left={}
-   n.left.ref=u.lt
-   n.left.cost=n.cost+cost
-   n.left.leaf=false
+   n.left=node(u.lt,cost)
+   n.left.rng=mimx(u.lt)
    box(n.left)
   }
   if(u.rt){
-   n.right={}
-   n.right.ref=u.rt
-   n.right.cost=n.cost+cost
-   n.right.leaf=false
+   n.right=node(u.rt,cost)
+   n.right.rng=mimx(u.rt)
    box(n.right)
   }
  }else{
-  n.leaf=true
-  n.cost=BU
-  let cls=n.ref[n.ref.length-1]
-  let h=cls.reduce((a,b)=>(a[b]=++a[b]||1,a),{})
-  n.hist = h
+   leaf(n)
  }
 }
 function tree(nd){
- var root = {}
- root.ref = nd
- root.cost= 0
- root.leaf= false
+ var root = node(nd,0)
+ root.rng=mimx(nd)
  box(root)
  return root;
 }
@@ -139,30 +151,67 @@ function clsfy(x,tree){
  let dpth=0
  while(true){
   if(r.leaf){
-   console.log(r.hist)  	
-   console.log("hit for ",x[x.length-1], dpth)
-   break
+   return r.label
   }
   if(r.left && x[r.dim]<=r.t){
    r=r.left
   }else if(r.right && x[r.dim]>r.t){
    r=r.right
-  }else{
-  	console.log("WHAAAAAT!")
-  	break
+  }else{ 
+   console.log(x)
+   console.log("WHAAAAAT!")
+   break
   }
   dpth++
  }
 }
 
+function clrrd(a,b){
+ a[b[0]]=(a[b[0]]||[]).concat(b[1])
+ return a
+}
+
+function stratify(d,r){
+ let lb=d[d.length-1]
+ let im=lb.map((x,i)=>[x,i])
+ let ir=im.reduce(clrrd,{})
+ let idx=[[],[]]
+
+ Object.keys(ir).map(k=>{
+  let sx=Math.floor(ir[k].length*r)
+  let slce=ir[k].slice(0,sx)
+  slce.map(x=>idx[0].push(x))
+  slce=ir[k].slice(sx)
+  slce.map(x=>idx[1].push(x))
+ })
+ 
+ return {a:slice(d,idx[0]),
+  b:slice(d,idx[1])}
+}
+
+
 function main(){
  lg("num of inst. "+iris.length)
  let labid = iris[0].length-1
  let tdata = transpose(iris.slice(1))
- let nd = norm(tdata)
+ 
+ const sd=stratify(tdata,0.9)
+
+ lg("****")
+ let nd = norm(sd.a)
  let t = tree(nd.data)
  
- clsfy(nd.data.map(_=>_[1]), t)
+ let N=nd.data[0].length
+ let error=0
+ for(let i=0;i<N;i++){
+  let x=rand(N-1) 
+  let qry=nd.data.map(_=>_[x])
+  let exptd=qry[qry.length-1]
+  let f=clsfy(qry, t)
+  if(f[1]!=exptd)error++
+ }
+ lg("error="+
+  (error)+"/"+N+"="+(error/N))
 
  lg("****")
 }
