@@ -173,7 +173,7 @@ function clrrd(a,b){
  return a
 }
 
-function stratify(d,r){
+function stratSplit(d,r){
  let lb=d[d.length-1]
  let im=lb.map((x,i)=>[x,i])
  let ir=im.reduce(clrrd,{})
@@ -208,16 +208,17 @@ function calcerror(title,t,data){
 }
 
 function main(){
- lg("Loaded "+iris.length+" instances",1)
+ lg("Loaded "
+   +iris.length+" instances",1)
+
  let labid = iris[0].length-1
  let tdata = transpose(iris.slice(1))
  
- const sd=stratify(tdata,0.9)
+ const sd=stratSplit(tdata,0.9)
 
-  
  let nd=norm(sd.a)
  let testd=norm(sd.b,nd.ranges)
- let t = tree(nd.data,6)
+ let t = tree(nd.data,12)
 
  calcerror("Train",t,nd.data)
  calcerror("Test",t,testd.data)
